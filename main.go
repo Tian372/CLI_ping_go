@@ -10,7 +10,7 @@ import (
 
 var usage = `
 usage:
-    ./main [-c count] [-i interval] [-t timeout] [--privileged] host
+    ./main [-c count] [-i interval] [-t timeout] host
 `
 
 func main() {
@@ -18,8 +18,6 @@ func main() {
 	timeout := flag.Duration("t", time.Second*100000, "")
 	interval := flag.Duration("i", time.Second, "")
 	count := flag.Int("c", -1, "")
-	privileged := flag.Bool("privileged", false, "")
-
 	flag.Usage = func() {
 		//if there is no input then print usage
 		fmt.Printf(usage)
@@ -32,7 +30,8 @@ func main() {
 	}
 
 	host := flag.Arg(0)
-	pinger, err := NewPinger(host)
+	caller, err := NewPinger(host)
+
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err.Error())
 		return
@@ -43,18 +42,18 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for _ = range c {
-			pinger.Stop()
+			caller.Stop()
 		}
 	}()
 
 
 
-	pinger.OnRecv = func(pkt *Package) {
+	caller.OnRecv = func(pkt *Package) {
 		fmt.Printf("%d bytes from %s: icmp_seq=%d time=%v ttl=%v\n",
 			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt, pkt.Ttl)
 	}
 
-	pinger.OnFinish = func(stats *Record) {
+	caller.OnFinish = func(stats *Record) {
 		fmt.Printf("\n--- %s ping statistics ---\n", stats.Addr)
 		fmt.Printf("%d packets transmitted, %d packets received, %v%% packet loss\n",
 			stats.PacketsSent, stats.PacketsRecv, stats.PacketLoss)
@@ -62,11 +61,11 @@ func main() {
 			stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt)
 	}
 
-	pinger.Count = *count
-	pinger.Interval = *interval
-	pinger.Timeout = *timeout
-	pinger.SetPrivileged(*privileged)
+	caller.Count = *count
+	caller.Interval = *interval
+	caller.Timeout = *timeout
+	//caller.SetPrivileged(*privileged)
 
-	fmt.Printf("PING %s (%s):\n", pinger.Addr(), pinger.IPAddr())
-	pinger.Run()
+	fmt.Printf("PING %s (%s):\n", caller.addr, caller.ipAddr)
+	caller.Run()
 }
