@@ -316,10 +316,10 @@ func (p *Caller) recvICMP(
 			var n, ttl int
 			var err error
 			if p.ipv4 {
-				var cm *ipv4.ControlMessage
-				n, cm, _, err = conn.IPv4PacketConn().ReadFrom(bytesReceived)
-				if cm != nil {
-					ttl = cm.TTL
+				var ipv4cm *ipv4.ControlMessage
+				n, ipv4cm, _, err = conn.IPv4PacketConn().ReadFrom(bytesReceived)
+				if ipv4cm != nil {
+					ttl = ipv4cm.TTL
 				}
 			} else {
 				var cm *ipv6.ControlMessage
@@ -346,7 +346,7 @@ func (p *Caller) recvICMP(
 }
 
 func (p *Caller) processPacket(recv *packet) error {
-	receivedAt := time.Now()
+	receivedTime := time.Now()
 	var proto int
 	if p.ipv4 {
 		proto = protocolICMP
@@ -387,7 +387,7 @@ func (p *Caller) processPacket(recv *packet) error {
 			return nil
 		}
 
-		outPkt.Rtt = receivedAt.Sub(timestamp)
+		outPkt.Rtt = receivedTime.Sub(timestamp)
 		outPkt.Seq = pkt.Seq
 		p.PacketsRecv++
 	default:

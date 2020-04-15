@@ -8,10 +8,8 @@ import (
 	"time"
 )
 
-var usage = `
-usage:
-    ./main [-c count] [-i interval] [-t timeout] host
-`
+var usage = "usage:\n./go_ping [-c count] [-i interval] [-t timeout] host"
+
 
 func main() {
 	//use flag to parse command line input
@@ -32,13 +30,17 @@ func main() {
 	host := flag.Arg(0)
 	caller, err := NewPinger(host)
 
+
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err.Error())
+		return
+	} else if timeout.Milliseconds() <= 0{
+		fmt.Println("ping: invalid timeout: `0s'")
 		return
 	}
 
 	// listen for ctrl-C signal
-	c := make(chan os.Signal, 1)
+		c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for _ = range c {
@@ -46,25 +48,22 @@ func main() {
 		}
 	}()
 
-
-
 	caller.OnRecv = func(pkt *Package) {
-		fmt.Printf("%d bytes from %s: icmp_seq=%d time=%v ttl=%v\n",
-			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt, pkt.Ttl)
+		fmt.Printf("%d bytes from %s: icmp_seq=%d ttl=%v time=%v\n",
+			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Ttl, pkt.Rtt)
 	}
 
 	caller.OnFinish = func(stats *Record) {
 		fmt.Printf("\n--- %s ping statistics ---\n", stats.Addr)
 		fmt.Printf("%d packets transmitted, %d packets received, %v%% packet loss\n",
 			stats.PacketsSent, stats.PacketsRecv, stats.PacketLoss)
-		fmt.Printf("round-trip min/avg/max/stddev = %v/%v/%v/%v\n",
+		fmt.Printf("round-trip min = %v, avg = %v, max = %v, stddev = %v.\n",
 			stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt)
 	}
 
 	caller.Count = *count
 	caller.Interval = *interval
 	caller.Timeout = *timeout
-	//caller.SetPrivileged(*privileged)
 
 	fmt.Printf("PING %s (%s):\n", caller.addr, caller.ipAddr)
 	caller.Run()
