@@ -171,7 +171,6 @@ func NewPinger(addr string) (*Caller, error) {
 	}, nil
 }
 
-
 // Run runs the caller. This is a blocking function that will exit when it's
 // done. If Count or Interval are not specified, it will run continuously until
 // it is interrupted.
@@ -224,6 +223,7 @@ func (p *Caller) run() {
 		case <-timeout.C:
 			close(p.done)
 			wg.Wait()
+			fmt.Println("time exceeded")
 			return
 		case <-interval.C:
 			if p.Count > 0 && p.PacketsSent >= p.Count {
@@ -322,14 +322,17 @@ func (p *Caller) recvICMP(
 					ttl = ipv4cm.TTL
 				}
 			} else {
-				var cm *ipv6.ControlMessage
-				n, cm, _, err = conn.IPv6PacketConn().ReadFrom(bytesReceived)
-				if cm != nil {
-					ttl = cm.HopLimit
+				var ipv6cm *ipv6.ControlMessage
+				n, ipv6cm, _, err = conn.IPv6PacketConn().ReadFrom(bytesReceived)
+				if ipv6cm != nil {
+					ttl = ipv6cm.HopLimit
 				}
 			}
+
 			if err != nil {
-				if netErr, ok := err.(*net.OpError); ok {
+				netErr, state := err.(*net.OpError)
+				if state {
+					//fmt.Println(netErr.Error())
 					if netErr.Timeout() {
 						// Read timeout
 						continue
@@ -338,6 +341,7 @@ func (p *Caller) recvICMP(
 						return
 					}
 				}
+
 			}
 
 			recv <- &packet{bytes: bytesReceived, nbytes: n, ttl: ttl}
