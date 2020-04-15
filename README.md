@@ -1,6 +1,6 @@
 # Ping CLI Application
 
-## Zhao Tian
+### Zhao Tian
 
 This repository was created for Cloudflare Internship Application: Systems.
 
